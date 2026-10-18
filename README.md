@@ -1,133 +1,118 @@
-# SmartDesk 2 Control for ESPHome
+# Autonomous Desk Controller for ESPHome
 
-Seamlessly integrate your Autonomous SmartDesk 2 with Home Assistant, while still retaining keypad functionality.
+A replacement-controller firmware fork of
+[at-karan-sharma/autonomous-desk-esphome](https://github.com/at-karan-sharma/autonomous-desk-esphome).
+It controls the existing SmartDesk motor controller over UART and exposes
+height, motion controls, presets, and status through the ESPHome native API.
 
-<br/>
-<p align="center">
-  <img alt="Final assembly" src="images/final-assembly.jpg" width="400" />
-</p>
+The motion engine is intended to support a dedicated physical controller.
+**Physical button/display firmware is not implemented yet.** This version
+requires a connected native API client and provides actions for a client UI.
+It does not currently provide local controls that work offline from the API.
+
+The original keypad-preserving implementation remains at `config/desky.yml`;
+its documentation is preserved in [docs/upstream-README.md](docs/upstream-README.md).
+The replacement engine is a separate package: `config/controller.yaml`.
+Do not load both packages on the same device.
 
 ## Features
 
-<img alt="Integration options" src="images/integration-options.png" height="400" />
+- Continuous numeric target moves at a 50 ms packet cadence, without repeated nudges.
+- Raw height plus direct inches input and observed-height readback.
+- Sessioned hold start/renew/release, with a 750 ms lease if renewal stops.
+- Nudge, four native preset recalls, and cancellable preset saving.
+- Stop cancels the operation and disables motion; re-enable before another move.
+- Motion disabled at boot and after any native API client disconnect.
+- Feedback loss, stalled movement, wrong direction, travel limits, and a total movement timeout cancel operations.
+- Preset startup filters implausible height jumps and requires sustained travel before checking stationarity.
 
-- Incrementally move desk up/down using buttons on Home Assistant.
-- Change desk height with a slider.
-- Read height of desk in inches.
-- Switch to one of four height presets using a dropdown.
-- Save the current desk height to one of the four memory presets, also with a dropdown.
+## Installation
 
-## Credit
+Tested with ESPHome **2026.7.2**, ESP32 `esp32dev`, and **ESP-IDF**.
+The replacement package defaults to raw height **75-123** (about 29.5-48.4 in).
+The inches input range currently targets that regular-height desk; extended
+models need separate validation and matching input bounds.
 
-This project was built with reference and inspiration from [vipial1](https://github.com/vipial1/desky-ha), [developit](https://github.com/developit/desky), and [Stefichen5](https://github.com/Stefichen5/AutonomousControl).
+Use [example.yml](example.yml) as the device configuration. It loads both the
+YAML package and the C++ engine through an ESPHome external component; no
+manual header copying is required. Put personal values in your local
+`secrets.yaml` using these keys:
 
-After failing to run the Espruino server on my ESP32, I adapted the communication logic for ESPHome, which made the Home Assistant integration trivial. I also added some new features, like setting memory presets and reading the desk height in inches.
+- `wifi_ssid`
+- `wifi_password`
+- `desk_api_encryption_key` (a valid ESPHome native API encryption key)
+- `desk_ota_password`
 
-## Disclaimer
+Set UART pins and raw travel limits for the actual desk before compiling.
+Pins in the example are examples, not a universal wiring map. For deployment,
+pin **both** GitHub references in `example.yml` to the same reviewed commit
+instead of tracking `main`.
 
-- It's your responsibility to ensure the desk doesn't collide with anything as it moves, which can cause injury or damage. Only use this integration when you are physically present to intervene.
-  - Pressing UP/DOWN on the controller keypad should interrupt any command from this integration.
-- Some low-voltage electronics work is needed. Use caution when using equipment like soldering irons and heat guns.
+```sh
+python3 -m pip install -r requirements.txt
+esphome config example.yml
+esphome compile example.yml
+```
 
-## Limitations
+Compilation does not install firmware. Uploading restarts the ESP32. The desk
+starts with Motion Enabled OFF; enabling it does not itself command movement.
+Keep existing device names and IDs when migrating an existing installation.
+See [docs/wiring.md](docs/wiring.md) and [docs/controls.md](docs/controls.md).
 
-1. After pressing the UP/DOWN buttons on the keypad controller, some integration features (moving to a user-defined height, memory preset save) will fail until at least 30 seconds elapse.
-2. Moving the desk to a user-defined height is janky. E.g. suppose the desk is at a height of 80 internal units, and you set the slider to 90 -- The desk will move up until the height is 90 +/- 3, at which point it will stop and slowly nudge up/down until the height is exactly 90. In comparison, moving to a preset height is much smoother.
+## Stopping and validation limits
 
-## Getting started
+Firmware cancellation is tested separately from physical motor braking.
+Manual/target/nudge cancellation sends one neutral release packet then goes
+silent. Native preset/save cancellation only goes silent, because neutral
+packets also serve as preset keepalives. There is no verified immediate brake
+command for every mode. Earlier silence-only firmware continued reporting
+movement for about a second after Stop; the current release packet is not a
+proven immediate physical brake. Supervise movement tests.
 
-### Hardware requirements
+Preset travel is confirmed by two consecutive height changes in the same
+direction. Startup expires after 3 s; confirmed travel ends after 3 s without
+another height change. `Preset stationary` does not prove the stored target
+was reached. `Preset travel unconfirmed` can also occur when already at that
+preset or after a very short move. See the protocol and validation notes in
+[docs/controls.md](docs/controls.md).
 
-1. **ESP32 WROOM 3D development board**
+The native controller stores presets. Selecting the memory-save control
+**overwrites that slot**; keep it out of the ordinary movement UI.
 
-2. **10P10C cable**:
-   I used the 1.5M version of the [SinLoon RJ50 cable](https://www.amazon.ca/gp/product/B0B1ZKCRK4/)
+## Development
 
-4. **Soldering kit, wires (24 AWG) and wire stripper**
+```sh
+make test       # 30 simulated scenarios; no device connection
+make compile    # ESP32 build with dummy credentials; never upload this binary
+```
 
-5. **1N4148 diode**:
-   A 1N4148 diode is needed to continue using the keypad alongside the Home Assistant integration.
+Host tests use AddressSanitizer and UndefinedBehaviorSanitizer. Leak checking
+is disabled for environments where LeakSanitizer cannot run under ptrace.
+The compile harness is only for build validation and contains dummy network
+and API credentials. Do not use `esphome run` or `upload` with it.
 
-#### Optional but recommended:
+Files:
 
-1. **Heat-shrink tubes, electrical tape, hot glue**:
-    For electrical insulation and for securing cable to housing.
+- `components/desk_motion/desk_motion.h`: standalone motion engine.
+- `components/desk_motion/__init__.py`: ESPHome header packaging.
+- `config/controller.yaml`: UART and native API controls.
+- `tests/`: simulated UART scenarios and compile-only harness.
+- `docs/`: controls, protocol constraints, wiring, and original documentation.
 
-2. **Access to a 3D printer**:
-   To print and use the included housing STL as in the project.
+Local device credentials, firmware binaries, and deployment records are not
+part of this repository. Future physical-controller firmware belongs alongside
+this engine once its hardware and behavior have been implemented and tested.
 
-### Electronics setup
+## Attribution
 
-1. Strip outer insulation of 10P10C cable.
-   - If using provided 3D printable case, avoid stripping more than 35mm of insulation to allow for a secure fit.
-2. Identify GND, RX, TX and 5V wires in the 10P10C cable. We will be tapping into these wires.
-   - The following table will help you trace which colors relate to which function.
+The upstream MIT license and history are retained. Karan Sharma's original
+ESPHome implementation provided the conversion formula and protocol sequences.
+Protocol research credits:
+[Stefichen5/AutonomousControl](https://github.com/Stefichen5/AutonomousControl),
+[developit's desk driver](https://gist.github.com/developit/d610e45a522810b5287db61e554ae9c9),
+and the contributors credited by the original project.
 
-  **Pin**   | **SinLoon RJ50** | **SmartDesk 2 cable** | **Function**
- -----------|------------------|-----------------------|--------------
-  1         | Black            |                       |
-  2         | Brown            |                       |
-  3         | Red              |                       |
-  4         | Orange           | Red                   | Sleep
-  5         | Yellow           |                       |
-  6         | Green            |                       |
-  7         | Blue             | Orange                | GND
-  8         | Purple           | Yellow                | RX
-  9         | Gray             | Green                 | TX
-  10        | White            | Blue                  | 5V
-
-   - Check the terminating end of your cable. If you're lucky, it uses the same layout as my SinLoon RJ50 cable and you can work with the same colors I did. If not, map your pin layout against the SinLoon RJ50's layout from the table.
-  <br/>
-  <p align="center">
-    <img alt="My SinLoon RJ50 cable as a reference" src="images/sinloon-10p10c-cable.jpg" width="400" />
-  </p>
-
-3. Strip insulation off the 4 relevant inner wires and solder wires to them, making 3-way taps.
-4. (Optional but highly recommended) Create breadboard prototype with cable attached to ESP32 to verify the whole system works. Jump ahead to [ESPHome](#esphome-setup) and [Home Assistant](#home-assistant-setup) sections for testing.
-   - Pin 16 (RX) of ESP32 is connected by green wire to tapped wire for RX.
-   - Pin 17 (TX) is connected by purple wire to the 1N4148 diode, with the darker end (cathode) pointed towards the ESP32 side. Other end of diode connects to TX wire.
-   - I labelled the wire ends with their respective functions because I only had red/black wires on hand :/
-   <br/>
-   <p align="center">
-     <img alt="Breadboard layout" src="images/breadboard.jpg" width="400" />
-   </p>
-5. Add shrink tubes before soldering the parts and wires to the top of the ESP32 board.
-   <br/>
-   <p align="center">
-     <img alt="Soldered and wrapped wiring" src="images/soldered-and-wrapped.jpg" height="400" />
-   </p>
-6. (Optional) Print 3D casing using the included files and assemble.
-   - When assembling, use a ziptie on either end of the stripped section, before fitting it into the case with hot glue. This will help prevent the cable from getting yanked out of the case.
-
-  <br/>
-  <p align="center">
-    <img alt="Before applying hot glue" src="images/pre-hot-glue.jpg" height="300" />
-    <img alt="After applying hot glue" src="images/post-hot-glue.jpg" height="300" />
-  </p>
-
-### ESPHome setup
-
-1. Create a new device in ESPHome dashboard, and configure name, static ip address etc, as needed.
-2. Set the remote package and substitutions by adding the following snippet. Refer to example.yml for more info.
-   - Note: the min/max height is based on the extended model of the SmartDesk 2. If you have the regular model, the range is probably 75-123 based on [this gist](https://gist.github.com/developit/d610e45a522810b5287db61e554ae9c9).
-  ```yaml
-  packages:
-    Autonomous_Desk: github://at-karan-sharma/autonomous-desk-esphome/config/desky.yml@main
-
-  substitutions:
-    uart_tx_pin: "17"
-    uart_rx_pin: "16"
-    desk_min_height: "66"
-    desk_max_height: "131"
-  ```
-3. Install config to the ESP32 over wireless/serial connection.
-
-### Home Assistant setup
-
-1. Look for a new ESPHome device in Home Assistant > Settings > "Devices & services" under the "Discovered" section.
-2. Click on "Configure".
-3. Copy-paste the encryption key (if configured in ESPHome) to finalize setup.
-
-## Contribution
-
-Feel free to contribute to this project by submitting issues or pull requests. Feedback and suggestions are also welcome.
+This fork replaces the original motion scheduling logic. Its revision 3 preset
+startup fix corrects a regression in this fork, not a defect attributed to the
+original project. Small compatible improvements can be proposed upstream
+separately; this repository contains the replacement-controller direction.

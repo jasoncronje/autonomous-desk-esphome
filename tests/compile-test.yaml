@@ -1,0 +1,30 @@
+# Compile only. Dummy credentials: never upload this firmware.
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [desk_motion]
+
+packages:
+  controller: !include ../config/controller.yaml
+
+esphome:
+  name: autonomous-desk
+  friendly_name: Autonomous Desk
+  build_path: /tmp/autonomous-desk-fork-build
+  compile_process_limit: 2
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+logger:
+api:
+  encryption:
+    key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+ota:
+  - platform: esphome
+wifi:
+  ssid: compile-test-not-a-network
+  password: compile-test-not-a-password

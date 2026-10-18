@@ -1,46 +1,36 @@
-## Copy-paste the follow section into your new device template
+# Personal credentials belong in your local secrets.yaml; never commit them.
+external_components:
+  - source: github://jasoncronje/autonomous-desk-esphome@main
+    components: [desk_motion]
 
 packages:
-  Autonomous_Desk: github://at-karan-sharma/autonomous-desk-esphome/config/desky.yml@main
+  controller: github://jasoncronje/autonomous-desk-esphome/config/controller.yaml@main
 
 substitutions:
   uart_tx_pin: "17"
-  uart_rx_pin: "16"
-  desk_min_height: "66"
-  desk_max_height: "131"
-
-## User config below
+  uart_rx_pin: "4"
+  desk_min_height: "75"
+  desk_max_height: "123"
 
 esphome:
-  name: desky
-  friendly_name: Standing Desk Control
+  name: autonomous-desk
+  friendly_name: Autonomous Desk
 
 esp32:
   board: esp32dev
   framework:
-    type: arduino
+    type: esp-idf
 
 logger:
 
 api:
   encryption:
-    key: # ENTER KEY
+    key: !secret desk_api_encryption_key
 
 ota:
-  password: # ENTER PASSWORD
+  - platform: esphome
+    password: !secret desk_ota_password
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "Desky Fallback Hotspot"
-    password: # ENTER PASSWORD
-
-  manual_ip:
-    static_ip: 10.0.0.214
-    gateway: 10.0.0.1
-    subnet: 255.255.255.0
-
-captive_portal:

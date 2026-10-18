@@ -1,0 +1,13 @@
+# Local credentials and build output
+secrets.yaml
+secrets.*.yaml
+.env
+.env.*
+!.env.example
+.esphome/
+.pio/
+__pycache__/
+*.pyc
+*.bin
+*.elf
+build/
