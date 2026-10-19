@@ -557,7 +557,145 @@ void preset_filter_and_startup_work_across_clock_wrap() {
   r.silence_for(5000, 81);
 }
 
+void repeated_preset_matches_uninterrupted_move() {
+  for (int slot = 1; slot <= 4; ++slot) {
+    Rig baseline, repeated;
+    baseline.arm(79);
+    repeated.arm(79);
+    assert(baseline.desk.preset(slot, baseline.now));
+    assert(repeated.desk.preset(slot, repeated.now));
+    for (unsigned ms = 0; ms <= 3000; ms += 10) {
+      baseline.now = repeated.now = 1000 + ms;
+      const int height = ms < 1200 ? 79 : 80 + (ms - 1200) / 400;
+      baseline.height(height);
+      repeated.height(height);
+      // Before the first packet, between neutral/key, Alexa's 820 ms retry,
+      // and after travel is confirmed: all repeats must leave output alone.
+      if (ms == 0 || ms == 10 || ms == 50 || ms == 820 ||
+          ms == 1000 || ms == 1600 || ms == 2200) {
+        assert(repeated.desk.preset(slot, repeated.now));
+      }
+      baseline.desk.tick(baseline.now, true);
+      repeated.desk.tick(repeated.now, true);
+      assert(repeated.tx == baseline.tx);
+      assert(std::strcmp(repeated.desk.status(), baseline.desk.status()) == 0);
+    }
+    assert(repeated.desk.active());
+    repeated.desk.stop(repeated.now);
+    repeated.silence_for(1000, 84);
+  }
+}
+
+void repeated_preset_cannot_extend_startup() {
+  Rig r;
+  r.arm();
+  r.desk.preset(2, r.now);
+  r.desk.tick(r.now, true);
+  r.tick();
+  for (int i = 0; i < 60; ++i) {
+    r.now += 50;
+    r.height(90);
+    assert(r.desk.preset(2, r.now));
+    r.desk.tick(r.now, true);
+  }
+  assert(!r.desk.active());
+  assert(std::strcmp(r.desk.status(), "Preset travel unconfirmed") == 0);
+  r.silence_for(1000, 90);
+}
+
+void repeated_preset_cannot_extend_stationary_window() {
+  Rig r;
+  r.arm();
+  r.desk.preset(2, r.now);
+  r.desk.tick(r.now, true);
+  r.tick();
+  r.tick(50, 91);
+  r.tick(50, 92);
+  assert(std::strcmp(r.desk.status(), "Moving to preset") == 0);
+  for (int i = 0; i < 60; ++i) {
+    r.now += 50;
+    r.height(92);
+    assert(r.desk.preset(2, r.now));
+    r.desk.tick(r.now, true);
+  }
+  assert(!r.desk.active());
+  assert(std::strcmp(r.desk.status(), "Preset stationary") == 0);
+  r.silence_for(1000, 92);
+}
+
+void repeated_preset_cannot_extend_total_timeout() {
+  Rig r;
+  r.arm();
+  r.desk.preset(2, r.now);
+  r.desk.tick(r.now, true);
+  for (int i = 1; i <= 600; ++i) {
+    r.now += 50;
+    const int height = i < 4 ? 89 + i : 90 + (i / 10) % 3;
+    r.height(height);
+    assert(r.desk.preset(2, r.now));
+    r.desk.tick(r.now, true);
+    if (i < 600) assert(r.desk.active());
+  }
+  assert(!r.desk.active());
+  assert(std::strcmp(r.desk.status(), "Movement timeout") == 0);
+  r.silence_for(1000, 92);
+}
+
+void repeated_preset_does_not_bypass_feedback_or_disarm() {
+  for (int fault = 0; fault < 3; ++fault) {
+    Rig r;
+    r.arm();
+    r.desk.preset(2, r.now);
+    r.desk.tick(r.now, true);
+    r.tick();
+    if (fault == 0) r.now += Controller::FEEDBACK_MS;
+    if (fault == 1) r.desk.set_enabled(false, r.now);
+    if (fault == 2) r.desk.tick(r.now, false);
+    assert(!r.desk.preset(2, r.now));
+    assert(!r.desk.active());
+    r.silence_for(1000, 90);
+  }
+}
+
+void different_preset_replaces_and_idle_preset_can_restart() {
+  Rig r;
+  r.arm();
+  r.desk.preset(2, r.now);
+  r.desk.tick(r.now, true);
+  r.tick();
+  assert(r.tx.back() == 8);
+  assert(r.desk.preset(1, r.now));
+  const auto count = r.tx.size();
+  for (int i = 0; i < 14; ++i) {
+    r.now += 50;
+    r.height(90);
+    assert(r.desk.preset(1, r.now));
+    r.desk.tick(r.now, true);
+    assert(r.tx.size() == count);
+  }
+  r.tick();
+  assert(r.tx.size() == count + 1 && r.tx.back() == 0);
+  r.tick();
+  assert(r.tx.back() == 4);
+  for (int i = 0; i < 60; ++i) r.tick();
+  assert(!r.desk.active());
+  r.silence_for(1000, 90);
+  const auto settled_count = r.tx.size();
+  assert(r.desk.preset(1, r.now));
+  r.desk.tick(r.now, true);
+  r.tick();
+  assert(r.tx.size() == settled_count + 2 && r.tx.back() == 4);
+  r.desk.stop(r.now);
+  r.silence_for(1000, 90);
+}
+
 int main() {
+  repeated_preset_matches_uninterrupted_move();
+  repeated_preset_cannot_extend_startup();
+  repeated_preset_cannot_extend_stationary_window();
+  repeated_preset_cannot_extend_total_timeout();
+  repeated_preset_does_not_bypass_feedback_or_disarm();
+  different_preset_replaces_and_idle_preset_can_restart();
   preset_slow_start_and_transient_height();
   preset_single_step_bounce_cannot_confirm_motion();
   preset_completion_requires_stationary_window();
@@ -588,5 +726,5 @@ int main() {
   release_never_transmits_at_boot_or_before_direction();
   release_does_not_keep_presets_or_saves_alive();
   release_cannot_resume_a_cancelled_hold_or_replacement();
-  std::cout << "30 simulated test scenarios passed; no device connection.\n";
+  std::cout << "36 simulated test scenarios passed; no device connection.\n";
 }

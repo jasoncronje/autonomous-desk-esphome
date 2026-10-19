@@ -143,7 +143,11 @@ class Controller {
       return false;
     }
     if (!ready(now)) return false;
-    begin(Mode::PRESET, static_cast<uint8_t>(1U << (slot + 1)), now);
+    const uint8_t command = static_cast<uint8_t>(1U << (slot + 1));
+    // Alexa may deliver the same activation twice. Leave its packet cadence,
+    // pending startup, confirmed progress and timeout deadlines unchanged.
+    if (mode_ == Mode::PRESET && command_ == command) return true;
+    begin(Mode::PRESET, command, now);
     status_ = "Starting preset";
     return true;
   }

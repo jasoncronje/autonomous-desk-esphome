@@ -38,6 +38,11 @@ a motor-current signal and can remain ON briefly after physical stopping.
 A replacement operation cancels the old one and waits 750 ms before starting.
 Stop also cancels a pending replacement. One controller owns UART output.
 
+Repeated requests for the active preset leave the current move unchanged,
+including during startup or a pending replacement. They do not resend its key,
+pause keepalives, reset progress, or extend timeouts. A different preset still
+replaces the move; the same preset can be requested again after it finishes.
+
 ## Preset startup
 
 The desk can briefly report a distant height during preset startup, then

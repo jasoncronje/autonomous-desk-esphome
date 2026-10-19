@@ -16,8 +16,8 @@ My ESP32 bridge and the [cable I used](https://www.amazon.com/dp/B0B1ZK35WW).
 - Replaced repeated nudges with continuous target-height movement and added inches input.
 - Added hold/release API actions for press-and-hold interfaces.
 - Added Stop, Motion Enabled, and movement status controls.
-- Fixed a preset-startup regression in this fork where transient height readings cancelled movement early.
-- Added 30 simulated tests and ESPHome external-component packaging.
+- Fixed preset regressions in this fork: early cancellation and duplicate Alexa requests restarting moves.
+- Added 36 simulated tests and ESPHome external-component packaging.
 
 ## Setup
 
