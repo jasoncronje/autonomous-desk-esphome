@@ -7,24 +7,24 @@ been validated with the replacement motion engine.
 
 ## Assembled controller
 
-<img src="../images/controller-enclosure.jpg" alt="Assembled desk controller and its cable, supplied by the builder" width="360" />
+<img src="../images/controller-enclosure.jpg" alt="My assembled desk controller and cable" width="360" />
 
-This is the builder's assembled controller, photographed with the cable plug
-outside the desk. The enclosure is closed, so the photo does not verify the
-internal board layout, wire colors, solder connections, or connector pinout.
+This is my assembled controller, with the cable unplugged from the desk.
+The photo shows the enclosure and plug. I haven't documented the internal
+board layout, wire colors, solder connections, or connector pinout here.
 
 ## Cable used
 
-The builder identified [Amazon ASIN B0B1ZK35WW](https://www.amazon.com/dp/B0B1ZK35WW)
-as the cable used for this assembly. The purchase link is recorded without
-tracking parameters. Its product listing was unavailable during documentation;
-brand, original length, conductor mapping, and electrical specifications remain
-unverified. Do not substitute the upstream cable's color map for this cable.
+I used this [cable (Amazon ASIN B0B1ZK35WW)](https://www.amazon.com/dp/B0B1ZK35WW)
+for my controller. I've removed the tracking parameters from the purchase link.
+I haven't verified its brand, original length, conductor mapping, or electrical
+specifications. I haven't confirmed that the upstream cable's color map
+applies to mine.
 
 ## Enclosure
 
-The exact case model or print source has not been identified. These upstream
-design files are included as references, not as a confirmed match:
+I haven't identified the exact case model or print source. I've included these
+upstream designs as references, but I haven't confirmed that they match mine:
 
 - [Base STL](../3d-printable-case/desky-esp32-base.stl), with a 60 × 43 × 24 mm bounding box.
 - [Cover STL](../3d-printable-case/desky-esp32-cover.stl).

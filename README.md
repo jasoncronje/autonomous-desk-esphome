@@ -30,14 +30,14 @@ Do not load both packages on the same device.
 
 <img src="images/controller-enclosure.jpg" alt="Assembled desk controller in a black enclosure with a short cable and modular plug" width="360" />
 
-The photo shows the assembled controller used with this firmware.
-The builder supplied this [cable purchase link (Amazon ASIN B0B1ZK35WW)](https://www.amazon.com/dp/B0B1ZK35WW).
-The listing could not be retrieved, so its brand, length, and pinout have not
-been independently verified. The photo does not establish the internal wiring.
+This is my assembled controller. I used this
+[cable (Amazon ASIN B0B1ZK35WW)](https://www.amazon.com/dp/B0B1ZK35WW).
+I haven't verified the listing's brand, length, or pinout. The photo shows the
+outside of my controller, not its internal wiring.
 
-The enclosure's exact model is unknown. The upstream
-[3D-printable case files](3d-printable-case/) remain available as references;
-they are not a confirmed match to the pictured enclosure.
+I haven't identified the exact case model. I've kept the upstream
+[3D-printable case files](3d-printable-case/) as references, but I haven't
+confirmed that they match my enclosure.
 See [hardware and wiring details](docs/wiring.md).
 
 ## Installation
