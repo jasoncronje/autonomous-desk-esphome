@@ -11,6 +11,14 @@ or Alexa configured through Home Assistant to move the desk.
 
 My ESP32 bridge and the [cable I used](https://www.amazon.com/dp/B0B1ZK35WW).
 
+## What I changed
+
+- Replaced repeated nudges with continuous target-height movement and added inches input.
+- Added hold/release API actions for press-and-hold interfaces.
+- Added Stop, Motion Enabled, and movement status controls.
+- Fixed a preset-startup regression in this fork where transient height readings cancelled movement early.
+- Added 30 simulated tests and ESPHome external-component packaging.
+
 ## Setup
 
 1. Copy [example.yml](example.yml) into your ESPHome configuration.
