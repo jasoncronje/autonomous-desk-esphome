@@ -2,10 +2,16 @@
 
 ## Native API and UI
 
+I use Home Assistant as the control interface for every desk movement. I
+removed the factory handset, so I use an external interface to reach these
+controls. That can be a dashboard, the mobile app, a separate control panel,
+or Alexa configured through Home Assistant. Voice-assistant integration is
+configured in Home Assistant, not in this firmware.
+
 Motion Enabled must be ON before a command. Stop disarms it. A native API
 client disconnect also disarms it, even if another client remains connected.
-Reconnect never resumes an old command. This is the current API-based design;
-independent local button handling is future work.
+Reconnect never resumes an old command. My ESP32 bridge has no local movement
+or Stop buttons; Home Assistant and network access are needed for normal control.
 
 Existing raw height, inches readback, nudge, and preset controls keep their
 ESPHome names. Added controls are Height (inches), Motion Enabled, Stop,

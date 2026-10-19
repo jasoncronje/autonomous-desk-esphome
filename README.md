@@ -1,14 +1,33 @@
-# Autonomous Desk Controller for ESPHome
+# Autonomous Desk Control for Home Assistant
 
-A replacement-controller firmware fork of
+This is my **Home Assistant-first** fork of
 [at-karan-sharma/autonomous-desk-esphome](https://github.com/at-karan-sharma/autonomous-desk-esphome).
-It controls the existing SmartDesk motor controller over UART and exposes
-height, motion controls, presets, and status through the ESPHome native API.
+I removed the factory handset from my desk to keep the setup clean. I don't
+have a physical desk controller: I send all movement, height, preset, and Stop
+commands through Home Assistant using the ESPHome native API.
 
-The motion engine is intended to support a dedicated physical controller.
-**Physical button/display firmware is not implemented yet.** This version
-requires a connected native API client and provides actions for a client UI.
-It does not currently provide local controls that work offline from the API.
+The original project adds Home Assistant control while retaining the factory
+keypad. My setup makes Home Assistant the main control interface and removes
+the handset. That's the core difference behind this fork.
+
+The ESP32 in the photo is the bridge between Home Assistant and the desk's
+existing motor control box. It sends UART commands; the motor control box
+still drives the lift motors. The bridge has no built-in movement buttons or
+display.
+
+## Control setup
+
+If you use this setup, I recommend having another control interface ready
+before removing the handset. That could be:
+
+- A Home Assistant dashboard or the mobile app.
+- A separate control panel or remote that sends commands through Home Assistant.
+- Alexa or another voice assistant configured to call your Home Assistant controls or scripts.
+
+Voice control needs to be configured in Home Assistant; it isn't built into
+this firmware. Make movement and Stop controls easy to reach from whichever
+interface you choose. With the handset removed, my setup has no physical
+fallback if Home Assistant or the network is unavailable.
 
 The original keypad-preserving implementation remains at `config/desky.yml`;
 its documentation is preserved in [docs/upstream-README.md](docs/upstream-README.md).
@@ -30,7 +49,7 @@ Do not load both packages on the same device.
 
 <img src="images/controller-enclosure.jpg" alt="Assembled desk controller in a black enclosure with a short cable and modular plug" width="360" />
 
-This is my assembled controller. I used this
+This is my ESP32 bridge in its enclosure. I used this
 [cable (Amazon ASIN B0B1ZK35WW)](https://www.amazon.com/dp/B0B1ZK35WW).
 I haven't verified the listing's brand, length, or pinout. The photo shows the
 outside of my controller, not its internal wiring.
@@ -114,8 +133,8 @@ Files:
 - `docs/`: controls, protocol constraints, wiring, and original documentation.
 
 Local device credentials, firmware binaries, and deployment records are not
-part of this repository. Future physical-controller firmware belongs alongside
-this engine once its hardware and behavior have been implemented and tested.
+part of this repository. Personal dashboards, voice-assistant setup, and other
+Home Assistant control interfaces are configured separately.
 
 ## Attribution
 
@@ -129,4 +148,5 @@ and the contributors credited by the original project.
 This fork replaces the original motion scheduling logic. Its revision 3 preset
 startup fix corrects a regression in this fork, not a defect attributed to the
 original project. Small compatible improvements can be proposed upstream
-separately; this repository contains the replacement-controller direction.
+separately; this repository focuses on Home Assistant-first control with the
+factory handset removed.

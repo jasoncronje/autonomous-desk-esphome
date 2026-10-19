@@ -1,15 +1,20 @@
 # Hardware scope and wiring
 
-The replacement package talks to the existing SmartDesk motor control box;
-it does not drive lift motors directly. It is intended for a setup where the
-original handset is no longer connected. Factory-keypad coexistence has not
-been validated with the replacement motion engine.
+I removed the factory handset from my desk to keep the setup clean. I control
+all desk movement through Home Assistant using the ESPHome native API.
+The ESP32 bridge talks to the existing SmartDesk motor control box over UART;
+the motor control box still drives the lift motors.
+
+The upstream project keeps the factory keypad alongside Home Assistant.
+My setup has no factory handset. The ESP32 bridge has no built-in movement
+buttons or display. Factory-keypad coexistence has not been validated with
+this fork's motion engine.
 
 ## Assembled controller
 
 <img src="../images/controller-enclosure.jpg" alt="My assembled desk controller and cable" width="360" />
 
-This is my assembled controller, with the cable unplugged from the desk.
+This is my assembled ESP32 bridge, with the cable unplugged from the desk.
 The photo shows the enclosure and plug. I haven't documented the internal
 board layout, wire colors, solder connections, or connector pinout here.
 
@@ -44,7 +49,13 @@ remain in [upstream-README.md](upstream-README.md). They describe a different
 installation approach; the diode arrangement there does not establish that
 two controller transmitters can safely share the new setup.
 
-A dedicated button/display board is planned. There is no GPIO button mapping,
-screen driver, or independent local Stop implementation in this version.
-Keep hardware-specific firmware and validated wiring here when added; do not
-represent the current API actions as completed physical-button support.
+## Control interface
+
+I recommend setting up another way to reach your Home Assistant desk controls
+before removing the handset: a dashboard, mobile app, separate control panel,
+or Alexa connected through Home Assistant. These interfaces send commands
+through Home Assistant to the ESP32; they aren't buttons on this enclosure.
+
+There is no GPIO button mapping, screen driver, or independent local Stop
+button in this firmware. My setup depends on Home Assistant and the network
+for control, with no factory handset to fall back to.
