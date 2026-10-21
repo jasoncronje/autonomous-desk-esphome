@@ -29,7 +29,7 @@ api:
   id: desk_api
   on_client_disconnected:
     then:
-      - switch.turn_off: desk_motion_enabled
+      - lambda: desk_draft::controller().disconnect(millis());
   actions:
     - action: desk_hold_start
       variables:

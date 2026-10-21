@@ -9,8 +9,10 @@ or Alexa configured through Home Assistant. Voice-assistant integration is
 configured in Home Assistant, not in this firmware.
 
 Motion Enabled must be ON before a command. Stop disarms it. A native API
-client disconnect also disarms it, even if another client remains connected.
-Reconnect never resumes an old command. My ESP32 bridge has no local movement
+client disconnect cancels the current operation, even if another client remains
+connected, but preserves Motion Enabled. After Home Assistant reconnects, a
+fresh command works without unlocking again; an interrupted move never resumes.
+An ESP32 reboot still starts disabled. My ESP32 bridge has no local movement
 or Stop buttons; Home Assistant and network access are needed for normal control.
 
 Existing raw height, inches readback, nudge, and preset controls keep their

@@ -17,7 +17,8 @@ My ESP32 bridge and the [cable I used](https://www.amazon.com/dp/B0B1ZK35WW).
 - Added hold/release API actions for press-and-hold interfaces.
 - Added Stop, Motion Enabled, and movement status controls.
 - Fixed preset regressions in this fork: early cancellation and duplicate Alexa requests restarting moves.
-- Added 36 simulated tests and ESPHome external-component packaging.
+- Kept motion enabled through Home Assistant reconnects while cancelling interrupted moves.
+- Added 39 simulated tests and ESPHome external-component packaging.
 
 ## Setup
 

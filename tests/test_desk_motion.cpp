@@ -207,10 +207,86 @@ void disconnect_and_reconnect() {
   r.desk.target(100, r.now);
   r.desk.tick(r.now, true);
   r.tick(50, 90, false);
-  assert(!r.desk.enabled());
+  assert(r.desk.enabled());
   assert(!r.desk.active());
   r.silence_for(3000, 90);
-  assert(!r.desk.target(100, r.now));
+  assert(r.desk.target(100, r.now));
+}
+
+void disconnect_cancels_every_mode_and_phase() {
+  for (bool callback : {false, true}) {
+    for (int mode = 0; mode < 6; ++mode) {
+      for (int phase = 0; phase < 3; ++phase) {
+        Rig r;
+        r.desk.set_manual_release_on_stop(true);
+        r.arm();
+        if (mode == 0) assert(r.desk.target(100, r.now));
+        if (mode == 1) assert(r.desk.hold(1, r.now));
+        if (mode == 2) assert(r.desk.nudge(1, r.now));
+        if (mode == 3) assert(r.desk.preset(2, r.now));
+        if (mode == 4) assert(r.desk.save(1, r.now));
+        if (mode == 5) assert(r.desk.start_hold(1, 7, r.now));
+        if (phase >= 1) r.desk.tick(r.now, true);
+        if (phase >= 2) r.tick();
+        const auto count = r.tx.size();
+        // The callback must cancel even if another API client stays connected.
+        if (callback) r.desk.disconnect(r.now);
+        r.desk.tick(r.now, callback);
+        assert(r.desk.enabled() && !r.desk.active());
+        assert(std::strcmp(r.desk.status(), "Control disconnected") == 0);
+        const bool manual = mode == 0 || mode == 1 || mode == 2 || mode == 5;
+        const bool release = phase == 2 && manual;
+        assert(r.tx.size() == count + (release ? 1 : 0));
+        if (release) assert(r.tx.back() == 0);
+        assert(!r.desk.renew_hold(7, r.now));
+        if (mode == 5) assert(!r.desk.start_hold(1, 7, r.now));
+        r.silence_for(5000, 90);  // Reconnection cannot resume old commands.
+        assert(!r.desk.active());
+        assert(r.desk.preset(2, r.now));  // A fresh command needs no unlock.
+        r.desk.tick(r.now, true);
+        r.tick();
+        assert(r.tx.back() == 8);
+      }
+    }
+  }
+}
+
+void idle_disconnect_preserves_enabled_or_disabled() {
+  for (bool enabled : {false, true}) {
+    Rig r;
+    r.height(90);
+    if (enabled) r.desk.set_enabled(true, r.now);
+    for (int i = 0; i < 20; ++i) {
+      r.desk.disconnect(r.now);
+      r.tick(50, 90, false);
+      assert(r.desk.enabled() == enabled);
+      assert(!r.desk.active() && r.tx.empty());
+    }
+    r.tick();
+    assert(r.desk.enabled() == enabled);
+    assert(r.desk.target(100, r.now) == enabled);
+  }
+}
+
+void disconnect_cancels_pending_release_and_replacement() {
+  Rig r;
+  r.desk.set_manual_release_on_stop(true);
+  r.arm();
+  assert(r.desk.target(100, r.now));
+  r.desk.tick(r.now, true);
+  r.tick();
+  assert(r.tx.back() == 2);
+  assert(r.desk.target(80, r.now));  // Old-key release and replacement pending.
+  const auto count = r.tx.size();
+  r.desk.tick(r.now, false);
+  assert(r.desk.enabled() && !r.desk.active());
+  assert(r.tx.size() == count + 1 && r.tx.back() == 0);
+  r.silence_for(5000, 90);
+  for (auto key : r.tx) assert(key != 1);
+  assert(r.desk.target(80, r.now));
+  r.desk.tick(r.now, true);
+  r.tick();
+  assert(r.tx.back() == 1);
 }
 
 void travel_limits_and_direction() {
@@ -510,7 +586,8 @@ void preset_startup_can_be_stopped_or_disconnected() {
     const auto count = r.tx.size();
     if (disconnect) r.tick(50, 79, false);
     else r.desk.set_enabled(false, r.now);
-    assert(!r.desk.active() && !r.desk.enabled());
+    assert(!r.desk.active());
+    assert(r.desk.enabled() == disconnect);
     assert(r.tx.size() == count);
     r.silence_for(5000, 79);
   }
@@ -642,7 +719,7 @@ void repeated_preset_cannot_extend_total_timeout() {
 }
 
 void repeated_preset_does_not_bypass_feedback_or_disarm() {
-  for (int fault = 0; fault < 3; ++fault) {
+  for (int fault = 0; fault < 2; ++fault) {
     Rig r;
     r.arm();
     r.desk.preset(2, r.now);
@@ -650,7 +727,6 @@ void repeated_preset_does_not_bypass_feedback_or_disarm() {
     r.tick();
     if (fault == 0) r.now += Controller::FEEDBACK_MS;
     if (fault == 1) r.desk.set_enabled(false, r.now);
-    if (fault == 2) r.desk.tick(r.now, false);
     assert(!r.desk.preset(2, r.now));
     assert(!r.desk.active());
     r.silence_for(1000, 90);
@@ -690,6 +766,9 @@ void different_preset_replaces_and_idle_preset_can_restart() {
 }
 
 int main() {
+  disconnect_cancels_every_mode_and_phase();
+  idle_disconnect_preserves_enabled_or_disabled();
+  disconnect_cancels_pending_release_and_replacement();
   repeated_preset_matches_uninterrupted_move();
   repeated_preset_cannot_extend_startup();
   repeated_preset_cannot_extend_stationary_window();
@@ -726,5 +805,5 @@ int main() {
   release_never_transmits_at_boot_or_before_direction();
   release_does_not_keep_presets_or_saves_alive();
   release_cannot_resume_a_cancelled_hold_or_replacement();
-  std::cout << "36 simulated test scenarios passed; no device connection.\n";
+  std::cout << "39 simulated test scenarios passed; no device connection.\n";
 }

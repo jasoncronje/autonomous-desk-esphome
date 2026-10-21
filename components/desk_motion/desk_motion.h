@@ -60,6 +60,12 @@ class Controller {
     if (enabled && !active()) status_ = "Ready";
   }
 
+  // Losing control cancels the operation, not the user's permission to move.
+  // Reconnection stays idle until a fresh command arrives.
+  void disconnect(uint32_t now) {
+    if (active()) stop(now, "Control disconnected");
+  }
+
   // Always cancel immediately. Optionally queue ONE manual-key release frame,
   // then silence; never sustain neutral keepalives or invent a direction pulse.
   // Native preset/save stops remain silent because neutral may sustain presets.
@@ -220,6 +226,8 @@ class Controller {
   }
 
   void tick(uint32_t now, bool connected) {
+    // Cancel before emitting a queued release, including pending replacements.
+    if (!connected) disconnect(now);
     // A queued release survives disarming/disconnect, but can emit only once.
     // An idle/boot Stop never queues this frame. Direction frames still require
     // the normal connection, enable, freshness, lease, and travel checks below.
@@ -231,10 +239,7 @@ class Controller {
       }
       return;
     }
-    if (!connected) {
-      if (enabled_ || active()) set_enabled(false, now);
-      return;
-    }
+    if (!connected) return;
     if (!active()) return;
     if (!enabled_ || !sender_) {
       stop(now, "Disabled");
